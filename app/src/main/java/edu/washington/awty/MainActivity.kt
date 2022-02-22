@@ -85,11 +85,21 @@ class MainActivity : AppCompatActivity() {
     fun sendTextMsg(){
         if(sendEnabled)
         {
+            val currentDate = "" + SimpleDateFormat("dd/M/yyyy hh:mm:ss").format(Date())
+
+            Log.i("awty","Trying to send a message on " + currentDate)
             val sharedPrefs = getSharedPreferences("awty", MODE_PRIVATE)
             val txmsg = sharedPrefs.getString("message", "Are we there yet?")
             val recipient = sharedPrefs.getString("phoneNum", "9546047405")
-            val smsManager = this.getSystemService(SmsManager::class.java)
-            smsManager.sendTextMessage(recipient, null, txmsg, null, null)
+            //val smsManager = this.getSystemService(SmsManager::class.java)
+            val smsManager = SmsManager.getDefault();
+            if(smsManager == null){
+                Log.i("awty", "Houston, we have a problem")
+            }
+            Log.i("awty", "SMSmanager: " + smsManager)
+            //val pendingIntent = getPendingIntent()
+            smsManager.sendTextMessage(recipient, null,
+                /* currentDate + ": " +  */ txmsg, null, null)
             Log.i("awty","Sent a message")
         }
 
@@ -144,7 +154,12 @@ class MainActivity : AppCompatActivity() {
         sharedPrefs.edit().putString("message", message).apply()
         if(!(errormsg.equals("")))
         {
+            Log.i("awty", "Trying to enable")
             Toast.makeText(context, errormsg, Toast.LENGTH_SHORT).show()
+            sendEnabled = true
+        }
+        else{
+            Log.i("awty", "Trying to enable")
             sendEnabled = true
         }
         updateNagMessage(sharedPrefs)
