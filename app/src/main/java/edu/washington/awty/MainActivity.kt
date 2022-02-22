@@ -3,28 +3,33 @@ package edu.washington.awty
 import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.*
+import android.content.pm.PackageManager
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.telephony.PhoneNumberUtils
+import android.telephony.SmsManager
 import android.util.Log
 import android.widget.Button
 import android.widget.EditText
 import android.widget.Toast
+import androidx.core.app.ActivityCompat
 import java.text.SimpleDateFormat
 import java.util.*
 
 class MainActivity : AppCompatActivity() {
 
     var nagMessage = "(425) 555-1212: Are we there yet?"
-
+    var sendEnabled = false
     inner class IntentListener : BroadcastReceiver() {
         init {
             Log.i("IntentListener", "The current msg is " + nagMessage)
+            sendTextMsg()
         }
         override fun onReceive(p0: Context?, intent: Intent?) {
             val sdf = SimpleDateFormat("dd/M/yyyy hh:mm:ss")
             val currentDate = sdf.format(Date())
             Toast.makeText(p0, nagMessage , Toast.LENGTH_LONG).show()
+            sendTextMsg()
             Log.i("IntentListener", "Message emmitted at " + currentDate + " was " + nagMessage)
         }
     }
@@ -32,6 +37,26 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        if (checkSelfPermission(android.Manifest.permission.SEND_SMS) ==
+            PackageManager.PERMISSION_GRANTED) {
+            myOnCreate()
+        } else {
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(android.Manifest.permission.SEND_SMS),
+                0
+            )
+        }
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int,permissions: Array<out String>,grantResults: IntArray)
+    {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        Log.i("Hopium", "Did this work")
+        myOnCreate();
+    }
+
+    fun myOnCreate() {
         val sharedPrefs = getSharedPreferences("awty", MODE_PRIVATE)
 
         val phoneInputBox = findViewById(R.id.phoenNumBox) as EditText
@@ -57,6 +82,18 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    fun sendTextMsg(){
+        if(sendEnabled)
+        {
+            val sharedPrefs = getSharedPreferences("awty", MODE_PRIVATE)
+            val txmsg = sharedPrefs.getString("message", "Are we there yet?")
+            val recipient = sharedPrefs.getString("phoneNum", "9546047405")
+            val smsManager = this.getSystemService(SmsManager::class.java)
+            smsManager.sendTextMessage(recipient, null, txmsg, null, null)
+            Log.i("awty","Sent a message")
+        }
+
+    }
     fun onClickStart (btn : Button, context: Context) {
         updateValues(context)
         val alarmManager = getSystemService(Context.ALARM_SERVICE) as AlarmManager
@@ -108,6 +145,7 @@ class MainActivity : AppCompatActivity() {
         if(!(errormsg.equals("")))
         {
             Toast.makeText(context, errormsg, Toast.LENGTH_SHORT).show()
+            sendEnabled = true
         }
         updateNagMessage(sharedPrefs)
     }
